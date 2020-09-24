@@ -1,5 +1,5 @@
 import express from 'express';
-import path from 'path';
+import { resolve } from 'path';
 import routes from './routes';
 
 import './database';
@@ -15,7 +15,7 @@ class App {
     this.server.use(express.json());
     this.server.use(
       '/files',
-      express.static(path.resolve(__dirname, '..', 'temp', 'uploads'))
+      express.static(resolve(__dirname, '..', 'temp', 'uploads'))
     );
   }
 
