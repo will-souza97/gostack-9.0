@@ -6,7 +6,8 @@ import File from '../models/File';
 import Appointment from '../models/Appointment';
 import Notification from '../schemas/Notification';
 
-import Mail from '../../lib/Mail';
+import CancellationMail from '../jobs/CancellationMail';
+import Queue from '../../lib/Queue';
 
 class AppointmentController {
   async index(req, res) {
@@ -50,6 +51,10 @@ class AppointmentController {
     const { provider_id, date } = req.body;
 
     // Check if provider_id is a provider
+
+    if (provider_id === req.userId) {
+      return res.json({ Error: 'Não pode' });
+    }
 
     const isProvider = await User.findOne({
       where: { id: provider_id, provider: true },
@@ -116,6 +121,11 @@ class AppointmentController {
           as: 'provider',
           attributes: ['name', 'email'],
         },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['name'],
+        },
       ],
     });
 
@@ -133,12 +143,13 @@ class AppointmentController {
     }
 
     appointment.canceled_at = new Date();
+
     await appointment.save();
-    await Mail.sendMail({
-      to: `${appointment.provider.name} <${appointment.provider.email}>`,
-      subject: 'Agendamento Cancelado',
-      text: 'Você tem uma nova notificação',
+
+    await Queue.add(CancellationMail.key, {
+      appointment,
     });
+
     return res.json(appointment);
   }
 }
